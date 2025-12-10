@@ -1,70 +1,127 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*", // si quieres, luego lo cambias a "http://localhost:3000"
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export function OPTIONS() {
+  // Preflight CORS
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request) {
   try {
-    const contentType = request.headers.get("content-type") || "";
+    console.log("TOKEN:", process.env.TELEGRAM_BOT_TOKEN ? "OK" : "NO");
+    console.log("CHAT_ID:", process.env.TELEGRAM_CHAT_ID ? "OK" : "NO");
 
-    let name, email, phone, message;
+    const contentType = request.headers.get("content-type") || "";
+    let body = {};
 
     if (contentType.includes("application/json")) {
-      // Cuando el frontend manda JSON
-      const body = await request.json();
-      ({ name, email, phone, message } = body);
-    } else {
-      // Cuando viene de un <form> normal (x-www-form-urlencoded o multipart/form-data)
+      body = await request.json();
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
       const formData = await request.formData();
-      name = formData.get("name");
-      email = formData.get("email");
-      phone = formData.get("phone");
-      message = formData.get("message");
+      body = {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        message: formData.get("message"),
+      };
+    } else {
+      console.error("Content-Type no soportado:", contentType);
+      return new Response(
+        JSON.stringify({ ok: false, error: "Content-Type no soportado" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
     }
+
+    const { name, email, phone, message } = body || {};
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chatId) {
+      console.error("Faltan variables de entorno");
       return new Response(
         JSON.stringify({ ok: false, error: "Faltan variables de entorno" }),
-        { status: 500 }
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
       );
     }
 
-    const text = `
-📩 Nuevo contacto desde tu web:
+    const text =
+      `Nuevo contacto desde CREDITONISSAN:\n\n` +
+      `Nombre: ${name || "-"}\n` +
+      `Email: ${email || "-"}\n` +
+      `Teléfono: ${phone || "-"}\n` +
+      `Mensaje:\n${message || "-"}`;
 
-👤 Nombre: ${name || "-"}
-📧 Email: ${email || "-"}
-📱 Teléfono: ${phone || "-"}
-📝 Mensaje:
-${message || "-"}
-    `.trim();
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
-    const response = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: "HTML",
-        }),
-      }
-    );
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+      }),
+    });
 
     const data = await response.json();
+    console.log("Telegram response:", data);
 
-    if (!data.ok) {
+    if (!response.ok || !data.ok) {
+      console.error("Error de Telegram:", data);
       return new Response(
-        JSON.stringify({ ok: false, error: data.description }),
-        { status: 500 }
+        JSON.stringify({
+          ok: false,
+          error: data.description || "Error al enviar a Telegram",
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
       );
     }
 
-    // Opcional: redirigir después del submit si viene de un formulario
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
   } catch (error) {
+    console.error("ERROR en handler:", error);
     return new Response(
-      JSON.stringify({ ok: false, error: error.message }),
-      { status: 500 }
+      JSON.stringify({
+        ok: false,
+        error: error.message || "Error interno",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
     );
   }
 }
