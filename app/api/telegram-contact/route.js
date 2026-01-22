@@ -63,12 +63,17 @@ export async function POST(request) {
       );
     }
 
+    const m = (typeof message === "string" ? message : "") || "";
+
+    // Si el message ya trae "Contrato:" entonces NO lo pegues otra vez como "Mensaje:"
+    const shouldIncludeMessage = m.trim() && !m.includes("Contrato:");
+
     const text =
       `Nuevo contacto desde CREDITONISSAN:\n\n` +
       `Nombre: ${name || "-"}\n` +
       `Email: ${email || "-"}\n` +
       `Teléfono: ${phone || "-"}\n` +
-      `Mensaje:\n${message || "-"}`;
+      (shouldIncludeMessage ? `Mensaje:\n${m}` : "");
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
