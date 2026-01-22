@@ -1,11 +1,10 @@
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // si quieres, luego lo cambias a "http://localhost:3000"
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
 export function OPTIONS() {
-  // Preflight CORS
   return new Response(null, {
     status: 200,
     headers: corsHeaders,
@@ -26,8 +25,10 @@ export async function POST(request) {
       const formData = await request.formData();
       body = {
         name: formData.get("name"),
-        email: formData.get("email"),
+        contractNumber: formData.get("contractNumber"),
         phone: formData.get("phone"),
+
+        // ✅ compatibilidad si alguien manda message
         message: formData.get("message"),
       };
     } else {
@@ -44,7 +45,7 @@ export async function POST(request) {
       );
     }
 
-    const { name, email, phone, message } = body || {};
+    const { name, contractNumber, phone, message } = body || {};
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -63,12 +64,15 @@ export async function POST(request) {
       );
     }
 
+    // ✅ Si viene message, úsalo; si no, arma el texto con los campos nuevos
+    const details =
+      (typeof message === "string" && message.trim())
+        ? message
+        : `Nombre: ${name || "-"}\nContrato: ${contractNumber || "-"}\nTeléfono: ${phone || "-"}`;
+
     const text =
       `Nuevo contacto desde CREDITONISSAN:\n\n` +
-      `Nombre: ${name || "-"}\n` +
-      `Email: ${email || "-"}\n` +
-      `Teléfono: ${phone || "-"}\n` +
-      `Mensaje:\n${message || "-"}`;
+      `${details}`;
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
@@ -113,7 +117,7 @@ export async function POST(request) {
     return new Response(
       JSON.stringify({
         ok: false,
-        error: error.message || "Error interno",
+        error: error?.message || "Error interno",
       }),
       {
         status: 500,
