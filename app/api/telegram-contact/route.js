@@ -1,10 +1,11 @@
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "*", // si quieres, luego lo cambias a "http://localhost:3000"
   "Access-Control-Allow-Methods": "POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
 export function OPTIONS() {
+  // Preflight CORS
   return new Response(null, {
     status: 200,
     headers: corsHeaders,
@@ -25,10 +26,8 @@ export async function POST(request) {
       const formData = await request.formData();
       body = {
         name: formData.get("name"),
-        contractNumber: formData.get("contractNumber"),
+        email: formData.get("email"),
         phone: formData.get("phone"),
-
-        // ✅ compatibilidad si alguien manda message
         message: formData.get("message"),
       };
     } else {
@@ -45,7 +44,7 @@ export async function POST(request) {
       );
     }
 
-    const { name, contractNumber, phone, message } = body || {};
+    const { name, email, phone, message } = body || {};
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -64,12 +63,12 @@ export async function POST(request) {
       );
     }
 
-    // ✅ Si viene message, úsalo; si no, arma el texto con los campos nuevos
     const text =
-      `✅Nuevo contacto desde CREDITONISSAN✅\n\n` +
-      `👤Nombre: ${name || "-"}\n` +
-      `📩Contrato: ${contractNumber || "-"}\n` +
-      `📞Teléfono: ${phone || "-"}`;
+      `Nuevo contacto desde CREDITONISSAN:\n\n` +
+      `Nombre: ${name || "-"}\n` +
+      `Email: ${email || "-"}\n` +
+      `Teléfono: ${phone || "-"}\n` +
+      `Mensaje:\n${message || "-"}`;
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
@@ -79,9 +78,6 @@ export async function POST(request) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        // si quieres, lo puedes dejar o quitar; no rompe nada
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
       }),
     });
 
@@ -117,7 +113,7 @@ export async function POST(request) {
     return new Response(
       JSON.stringify({
         ok: false,
-        error: error?.message || "Error interno",
+        error: error.message || "Error interno",
       }),
       {
         status: 500,
