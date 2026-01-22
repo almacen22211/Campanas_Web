@@ -65,14 +65,13 @@ export async function POST(request) {
     }
 
     // ✅ Si viene message, úsalo; si no, arma el texto con los campos nuevos
-    const details =
-      (typeof message === "string" && message.trim())
-        ? message
-        : `👤 <b>Nombre:</b> ${name || "-"}\n📩 <b>Contrato:</b> ${contractNumber || "-"}\n📞 <b>Teléfono:</b> ${phone || "-"}`;
-
     const text =
-      `✅ <b>Nuevo contacto desde CREDITONISSAN</b> ✅\n\n` +
-      details;
+      `✅Nuevo contacto desde CREDITONISSAN✅\n\n` +
+      `👤Nombre: ${name || "-"}\n` +
+      `📩Contrato: ${contractNumber || "-"}\n` +
+      `📞Teléfono: ${phone || "-"}`;
+
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -80,7 +79,8 @@ export async function POST(request) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: "HTML",   // 👈 CLAVE
+        // si quieres, lo puedes dejar o quitar; no rompe nada
+        parse_mode: "HTML",
         disable_web_page_preview: true,
       }),
     });
