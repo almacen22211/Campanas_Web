@@ -68,10 +68,10 @@ export async function POST(request) {
     const details =
       (typeof message === "string" && message.trim())
         ? message
-        : `Nombre: ${name || "-"}\nContrato: ${contractNumber || "-"}\nTeléfono: ${phone || "-"}`;
+        : `👤Nombre: ${name || "-"}\n📩Contrato: ${contractNumber || "-"}\n📞Teléfono: ${phone || "-"}`;
 
     const text =
-      `Nuevo contacto desde CREDITONISSAN:\n\n` +
+      `✅Nuevo contacto desde CREDITONISSAN✅\n\n` +
       `${details}`;
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
