@@ -27,9 +27,7 @@ export async function POST(request) {
         name: formData.get("name"),
         contractNumber: formData.get("contractNumber"),
         phone: formData.get("phone"),
-
-        // ✅ compatibilidad si alguien manda message
-        message: formData.get("message"),
+        message: formData.get("message"), // opcional
       };
     } else {
       console.error("Content-Type no soportado:", contentType);
@@ -45,7 +43,22 @@ export async function POST(request) {
       );
     }
 
-    const { name, contractNumber, phone, message } = body || {};
+    // Normaliza a string (como el de GM)
+    const name = String(body?.name ?? "").trim();
+    const contractNumber = String(body?.contractNumber ?? "").trim();
+    const phone = String(body?.phone ?? "").trim();
+    const message = String(body?.message ?? "").trim();
+
+    // Validación mínima (si quieres que sea obligatorio)
+    if (!name || !contractNumber || !phone) {
+      return new Response(JSON.stringify({ ok: false, error: "Faltan campos." }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    }
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -64,15 +77,13 @@ export async function POST(request) {
       );
     }
 
-    // ✅ Si viene message, úsalo; si no, arma el texto con los campos nuevos
-    const details =
-      (typeof message === "string" && message.trim())
-        ? message
-        : `Nombre: ${name || "-"}\nContrato: ${contractNumber || "-"}\nTeléfono: ${phone || "-"}`;
-
-    const text =
-      `✅Nuevo contacto desde CREDITONISSAN✅\n\n` +
-      `${details}`;
+    // ✅ Mensaje SIEMPRE con emojis (estilo GM)
+    const msg =
+      `✅ Nuevo contacto desde CREDITONISSAN ✅\n\n` +
+      `👤 Nombre: ${name}\n` +
+      `📄 Contrato: ${contractNumber}\n` +
+      `📞 Teléfono: ${phone}\n` +
+      (message ? `\n📝 Nota: ${message}\n` : "");
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
@@ -81,7 +92,7 @@ export async function POST(request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text,
+        text: msg, // 👈 clave: mandar msg directo
       }),
     });
 
